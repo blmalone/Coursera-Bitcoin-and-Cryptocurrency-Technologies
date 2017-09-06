@@ -1,9 +1,11 @@
 package com.company;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 public class TxHandler {
 
-    private UTXOPool utxoPool;
+    private UTXOPool utxoPool, claimedUTXOs;
 
     /**
      * Creates a public ledger whose current UTXOPool (collection of unspent transaction outputs) is
@@ -24,7 +26,7 @@ public class TxHandler {
      *     values; and false otherwise.
      */
     public boolean isValidTx(Transaction tx) {
-        UTXOPool claimedUTXOs = new UTXOPool();
+        claimedUTXOs = new UTXOPool();
         int sumOfInputValues = 0;
         for(int i = 0; i < tx.numInputs(); i++) {
             Transaction.Input in = tx.getInput(i);
@@ -52,7 +54,25 @@ public class TxHandler {
      * updating the current UTXO pool as appropriate.
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
-        // IMPLEMENT THIS
+        Set<Transaction> validBlock = new HashSet<>();
+        for(int i = 0; i < possibleTxs.length; i++) {
+            Transaction transaction = possibleTxs[i];
+            //Check if tx is valid - in isolation
+            if(isValidTx(transaction)) {
+                validBlock.add(possibleTxs[i]);
+                //Remove UTXO from pool that has been spent in valid tx
+                ArrayList<UTXO> txUTXOs = claimedUTXOs.getAllUTXO();
+                for(int j = 0; i < txUTXOs.size(); j++) {
+                    utxoPool.removeUTXO(txUTXOs.get(j));
+                    //Create UTXO with tx hash and index of output
+                    UTXO utxo = new UTXO(transaction.getHash(), j);
+                    //Add UTXO to utxoPool
+                    utxoPool.addUTXO(utxo, transaction.getOutput(j));
+                }
+            }
+        }
+        Transaction[] validBlockArray = new Transaction[validBlock.size()];
+        return validBlock.toArray(validBlockArray);
     }
 
 }
